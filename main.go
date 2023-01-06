@@ -1,45 +1,32 @@
 package main
 
 import (
+	"api-gorm/config"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"gorm.io/gorm"
 	"github.com/gorilla/mux"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
 var db *gorm.DB
 var err error
 
-// Product is a representation of a product
 type Product struct {
 	ID    int             `form:"id" json:"id"`
 	Name  string          `form:"name" json:"name"`
 	Description  string 	`form:"code" json:"description"`
 	Stock       int    		`json:"stock"`
 }
-
-// Result is an array of product
 type Result struct {
 	Code    int         `json:"code"`
 	Data    interface{} `json:"data"`
 	Message string      `json:"message"`
 }
 
-// Main
 func main() {
-	db, err = gorm.Open("mysql", "root:@tcp(127.0.0.1:3306)/db_store")
-
-	if err != nil {
-		log.Println("Connection failed", err)
-	} else {
-		log.Println("Connection established")
-	}
-
-	// db.AutoMigrate(&Product{})
+	config.Connect()
 	handleRequests()
 }
 
@@ -76,8 +63,6 @@ func handleRequests() {
 }
 
 func getAll(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Endpoint hit: get products")
-
 	products := []Product{}
 	db.Find(&products)
 
