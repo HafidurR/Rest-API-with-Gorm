@@ -71,7 +71,7 @@ func Create(w http.ResponseWriter, r *http.Request) {
 
 	db.Create(&product)
 
-	res := Result{Code: 200, Data: product, Message: "Success create product"}
+	res := Result{Code: 201, Data: product, Message: "Success create product"}
 	result, err := json.Marshal(res)
 
 	if err != nil {
