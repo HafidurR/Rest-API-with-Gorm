@@ -32,7 +32,7 @@ func HandleRequests() {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 
-		res := Result{Code: 403, Message: "Method not allowed"}
+		res := Result{Code: 405, Message: "Method not allowed"}
 		response, _ := json.Marshal(res)
 		w.Write(response)
 	})
