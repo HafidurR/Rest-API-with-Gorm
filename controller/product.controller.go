@@ -1,37 +1,49 @@
 package controller
 
 import (
+	"api-gorm/config"
 	"encoding/json"
-	"fmt"
+	"github.com/gorilla/mux"
 	"io/ioutil"
 	"net/http"
-	"github.com/gorilla/mux"
-	"gorm.io/gorm"
 )
 
-var db *gorm.DB
 var err error
 
 type Product struct {
-	ID    int             `form:"id" json:"id"`
-	Name  string          `form:"name" json:"name"`
-	Description  string 	`form:"code" json:"description"`
-	Stock       int    		`json:"stock"`
+	ID          int    `form:"id" json:"id"`
+	Name        string `form:"name" json:"name"`
+	Description string `form:"code" json:"description"`
+	Stock       int    `json:"stock"`
 }
 
 type Result struct {
-	Code    int         `json:"code"`
-	Data    interface{} `json:"data"`
+	Success 	bool   		`json:"success"`
 	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
+}
+
+type NotFoundResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
+var db = config.Connect()
+
+func check(productID string) bool {
+	var product Product
+	db.First(&product, productID)
+	if product.ID == 0 {
+		return false
+	}
+	return true
 }
 
 func GetAll(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Endpoint hit: get products")
-
 	products := []Product{}
 	db.Find(&products)
 
-	res := Result{Code: 200, Data: products, Message: "Success get products"}
+	res := Result{Success: true, Message: "Success get products", Data: products}
 	results, err := json.Marshal(res)
 
 	if err != nil {
@@ -49,9 +61,23 @@ func GetDetail(w http.ResponseWriter, r *http.Request) {
 
 	var product Product
 
+	if check(productID) == false {
+		res := NotFoundResponse{Success: false, Message: "Data not found"}
+		result, err := json.Marshal(res)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write(result)
+		return
+	}
+
 	db.First(&product, productID)
 
-	res := Result{Code: 200, Data: product, Message: "Success get product"}
+	res := Result{Success: true, Message: "Success get detail product", Data: product}
 	result, err := json.Marshal(res)
 
 	if err != nil {
@@ -71,7 +97,7 @@ func Create(w http.ResponseWriter, r *http.Request) {
 
 	db.Create(&product)
 
-	res := Result{Code: 201, Data: product, Message: "Success create product"}
+	res := Result{Success: true, Message: "Success create product", Data: product}
 	result, err := json.Marshal(res)
 
 	if err != nil {
@@ -79,7 +105,7 @@ func Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusCreated)
 	w.Write(result)
 }
 
@@ -92,11 +118,25 @@ func Update(w http.ResponseWriter, r *http.Request) {
 	var productUpdates Product
 	json.Unmarshal(payloads, &productUpdates)
 
+	if check(productID) == false {
+		res := NotFoundResponse{Success: false, Message: "Data not found"}
+		result, err := json.Marshal(res)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write(result)
+		return
+	}
+
 	var product Product
 	db.First(&product, productID)
 	db.Model(&product).Updates(productUpdates)
 
-	res := Result{Code: 200, Data: product, Message: "Success update product"}
+	res := Result{Success: true, Message: "Success update product", Data: product}
 	result, err := json.Marshal(res)
 
 	if err != nil {
@@ -112,12 +152,25 @@ func Delete(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	productID := vars["id"]
 
-	var product Product
+	if check(productID) == false {
+		res := NotFoundResponse{Success: false, Message: "Data not found"}
+		result, err := json.Marshal(res)
 
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write(result)
+		return
+	}
+
+	var product Product
 	db.First(&product, productID)
 	db.Delete(&product)
 
-	res := Result{Code: 200, Message: "Success delete product"}
+	res := Result{Success: true, Message: "Success delete products", Data: product}
 	result, err := json.Marshal(res)
 
 	if err != nil {

@@ -1,4 +1,4 @@
-package routes
+package routes 
 
 import (
 	"api-gorm/controller"
@@ -14,12 +14,30 @@ type Result struct {
 	Message string      `json:"message"`
 }
 
+func middleware1(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Println(r.Method, r.RequestURI)
+			next.ServeHTTP(w, r)
+	})
+}
+
+func middleware2(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Println("Ini middleware khusus")
+			next.ServeHTTP(w, r)
+	})
+}
+
 func HandleRequests() {
 	log.Println("Start the development server at http://127.0.0.1:9000")
 
-	myRouter := mux.NewRouter().StrictSlash(true)
+	router := mux.NewRouter().StrictSlash(true)
+	router.Use(middleware1)
+	
+	pref := router.PathPrefix("/product").Subrouter()
+	pref.Use(middleware2)
 
-	myRouter.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
 
@@ -28,7 +46,7 @@ func HandleRequests() {
 		w.Write(response)
 	})
 
-	myRouter.MethodNotAllowedHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	router.MethodNotAllowedHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 
@@ -37,11 +55,11 @@ func HandleRequests() {
 		w.Write(response)
 	})
 
-	myRouter.HandleFunc("/product", controller.GetAll).Methods("GET")
-	myRouter.HandleFunc("/product/{id}", controller.GetDetail).Methods("GET")
-	myRouter.HandleFunc("/product", controller.Create).Methods("POST")
-	myRouter.HandleFunc("/product/{id}", controller.Update).Methods("PUT")
-	myRouter.HandleFunc("/product/{id}", controller.Delete).Methods("DELETE")
+	pref.HandleFunc("/", controller.GetAll).Methods("GET")
+	pref.HandleFunc("/{id}", controller.GetDetail).Methods("GET")
+	pref.HandleFunc("/post", controller.Create).Methods("POST")
+	pref.HandleFunc("/{id}", controller.Update).Methods("PUT")
+	pref.HandleFunc("/{id}", controller.Delete).Methods("DELETE")
 
-	log.Fatal(http.ListenAndServe(":9000", myRouter))
+	log.Fatal(http.ListenAndServe(":9000", router))
 }

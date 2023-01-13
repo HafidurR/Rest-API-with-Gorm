@@ -9,7 +9,7 @@ import (
 var db *gorm.DB
 var err error
 
-func Connect()  {
+func Connect() *gorm.DB {
 	db, err = gorm.Open(mysql.Open("root:@tcp(127.0.0.1:3306)/db_store"))
 
 	if err != nil {
@@ -19,4 +19,5 @@ func Connect()  {
 	}
 
 	// db.AutoMigrate(&Product{})
+	return db
 }
